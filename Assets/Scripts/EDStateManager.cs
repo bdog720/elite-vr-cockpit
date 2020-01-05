@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Text.RegularExpressions;
 using System.Linq;
@@ -190,30 +190,37 @@ namespace EVRC
 
         void OnEnable()
         {
-            Events.System(EVREventType.VREvent_ProcessConnected).Listen(OnProcessConnected);
-            Events.System(EVREventType.VREvent_ProcessDisconnected).Listen(OnProcessDisconnected);
+            Events.System(EVREventType.VREvent_SceneApplicationChanged).Listen(OnSceneApplicationChanged);
+            Events.Initialized.AddListener(OnSteamVRInitialized);
+
+            // Handle the case where SteamVR is already initialized
+            if (SteamVR.initializedState == SteamVR.InitializedStates.InitializeSuccess)
+            {
+                OnSteamVRInitialized(true);
+            }
         }
 
         void OnDisable()
         {
-            Events.System(EVREventType.VREvent_ProcessConnected).Remove(OnProcessConnected);
-            Events.System(EVREventType.VREvent_ProcessDisconnected).Remove(OnProcessDisconnected);
+            Events.System(EVREventType.VREvent_SceneApplicationChanged).Remove(OnSceneApplicationChanged);
+            Events.Initialized.RemoveListener(OnSteamVRInitialized);
         }
 
-        private void OnProcessConnected(VREvent_t ev)
+        private void OnSteamVRInitialized(bool initialized)
+        {
+            if (initialized)
+            {
+                SetCurrentProcess(OpenVR.Compositor.GetCurrentSceneFocusProcess());
+            }
+        }
+
+        private void OnSceneApplicationChanged(VREvent_t ev)
         {
             var pid = ev.data.process.pid;
             currentPid = pid;
             SetCurrentProcess(pid);
-        }
-
-        private void OnProcessDisconnected(VREvent_t ev)
-        {
-            var pid = ev.data.process.pid;
-            if (currentPid == pid)
-            {
-                SetCurrentProcess(0);
-            }
+									 
+			 
         }
 
         private void SetCurrentProcess(uint pid)
